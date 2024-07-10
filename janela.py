@@ -3,7 +3,7 @@ from tkinter import *
 import customtkinter as ctk
 import sqlite3
 from tkinter import messagebox
-from janela_ferramentas import janela2
+from janela_ferramentas import JanelaMenu
 
 
 
@@ -91,6 +91,7 @@ class App(ctk.CTk, BackEnd):
         self.conf_janela_ini()
         self.tela_login()
         self.cria_tabela()
+
 
     #Conf Janela Principal
     def conf_janela_ini(self):
@@ -189,7 +190,7 @@ class App(ctk.CTk, BackEnd):
 
     def abrir_nova_tela(self):
         self.destroy() #fechando janela principal
-        self.janelaferramentas = janela2()
+        self.janelaferramentas = JanelaMenu()
         self.janelaferramentas(self)
 
 

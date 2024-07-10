@@ -1,148 +1,164 @@
-import customtkinter as ctk
-from tkinter import *
-from tkinter import messagebox
-janela = ctk.CTk()
+import tkinter
+import tkinter.messagebox
+import customtkinter
+
+customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 
-class Application():
+class App(customtkinter.CTk):
     def __init__(self):
-        self.janela = janela
-        self.tema()
-        self.tela()
-        self.tela_login()
-        janela.mainloop()
-    def tema(self):
-        # Definindo o tema personalizado
-        ctk.set_appearance_mode('dark')
-        ctk.set_default_color_theme('Tema.json')
+        super().__init__()
 
-    def tela(self):
-        # Criando a janela principal
-        janela.geometry('700x400')
-        janela.title('Tela de Login')
-        janela.resizable(False, False)
-        janela.configure(bg='white')
-        janela.iconbitmap('/Users/danielaugusto/PycharmProjects/TCC/ppe1.ico')  # Definindo o ícone da janela
+        # configure window
+        self.title("CustomTkinter complex_example.py")
+        self.geometry(f"{1100}x{580}")
 
-    def tela_login(self):
-        # Definindo a cor padrão do App
-        cor_rgb = '#343434'
+        # configure grid layout (4x4)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure((2, 3), weight=0)
+        self.grid_rowconfigure((0, 1, 2), weight=1)
 
-        # Frame para imagem
-        frame0 = Frame(master=janela, bg='#1c1c1c', width=350, height=396)
-        frame0.pack(side=RIGHT)
-        # Frame para os widgets de login
-        frame = Frame(master=janela, bg=cor_rgb, width=350, height=396)
-        frame.pack(side=LEFT)
+        # create sidebar frame with widgets
+        self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
+        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="CustomTkinter", font=customtkinter.CTkFont(size=20, weight="bold"))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
+        self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
+        self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
+        self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
+        self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
+        self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
+        self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
+        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
+        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
+                                                                       command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
+        self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
+        self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
+        self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
+                                                               command=self.change_scaling_event)
+        self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
 
-        # Carregando e exibindo a imagem
-        img = PhotoImage(file='Imagens/ppe1.png')
-        label_img = ctk.CTkButton(master=frame0, text='', image=img)
-        label_img.configure(text=None, hover=None)
-        label_img.place(x=45, y=115)
+        # create main entry and button
+        self.entry = customtkinter.CTkEntry(self, placeholder_text="CTkEntry")
+        self.entry.grid(row=3, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
 
-        label_tt = ctk.CTkLabel(master=frame0, text='Entre em sua conta e tenha \nacesso a plataforma')
-        label_tt.configure(font=('Roboto', 24, 'bold'), text_color='#EEAD2D', bg_color='#1c1c1c')
-        label_tt.place(x=30, y=40)
+        self.main_button_1 = customtkinter.CTkButton(master=self, fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"))
+        self.main_button_1.grid(row=3, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
+
+        # create textbox
+        self.textbox = customtkinter.CTkTextbox(self, width=250)
+        self.textbox.grid(row=0, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+
+        # create tabview
+        self.tabview = customtkinter.CTkTabview(self, width=250)
+        self.tabview.grid(row=0, column=2, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.tabview.add("CTkTabview")
+        self.tabview.add("Tab 2")
+        self.tabview.add("Tab 3")
+        self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
+        self.tabview.tab("Tab 2").grid_columnconfigure(0, weight=1)
+
+        self.optionmenu_1 = customtkinter.CTkOptionMenu(self.tabview.tab("CTkTabview"), dynamic_resizing=False,
+                                                        values=["Value 1", "Value 2", "Value Long Long Long"])
+        self.optionmenu_1.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.combobox_1 = customtkinter.CTkComboBox(self.tabview.tab("CTkTabview"),
+                                                    values=["Value 1", "Value 2", "Value Long....."])
+        self.combobox_1.grid(row=1, column=0, padx=20, pady=(10, 10))
+        self.string_input_button = customtkinter.CTkButton(self.tabview.tab("CTkTabview"), text="Open CTkInputDialog",
+                                                           command=self.open_input_dialog_event)
+        self.string_input_button.grid(row=2, column=0, padx=20, pady=(10, 10))
+        self.label_tab_2 = customtkinter.CTkLabel(self.tabview.tab("Tab 2"), text="CTkLabel on Tab 2")
+        self.label_tab_2.grid(row=0, column=0, padx=20, pady=20)
+
+        # create radiobutton frame
+        self.radiobutton_frame = customtkinter.CTkFrame(self)
+        self.radiobutton_frame.grid(row=0, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.radio_var = tkinter.IntVar(value=0)
+        self.label_radio_group = customtkinter.CTkLabel(master=self.radiobutton_frame, text="CTkRadioButton Group:")
+        self.label_radio_group.grid(row=0, column=2, columnspan=1, padx=10, pady=10, sticky="")
+        self.radio_button_1 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, variable=self.radio_var, value=0)
+        self.radio_button_1.grid(row=1, column=2, pady=10, padx=20, sticky="n")
+        self.radio_button_2 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, variable=self.radio_var, value=1)
+        self.radio_button_2.grid(row=2, column=2, pady=10, padx=20, sticky="n")
+        self.radio_button_3 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, variable=self.radio_var, value=2)
+        self.radio_button_3.grid(row=3, column=2, pady=10, padx=20, sticky="n")
+
+        # create slider and progressbar frame
+        self.slider_progressbar_frame = customtkinter.CTkFrame(self, fg_color="transparent")
+        self.slider_progressbar_frame.grid(row=1, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.slider_progressbar_frame.grid_columnconfigure(0, weight=1)
+        self.slider_progressbar_frame.grid_rowconfigure(4, weight=1)
+        self.seg_button_1 = customtkinter.CTkSegmentedButton(self.slider_progressbar_frame)
+        self.seg_button_1.grid(row=0, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
+        self.progressbar_1 = customtkinter.CTkProgressBar(self.slider_progressbar_frame)
+        self.progressbar_1.grid(row=1, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
+        self.progressbar_2 = customtkinter.CTkProgressBar(self.slider_progressbar_frame)
+        self.progressbar_2.grid(row=2, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
+        self.slider_1 = customtkinter.CTkSlider(self.slider_progressbar_frame, from_=0, to=1, number_of_steps=4)
+        self.slider_1.grid(row=3, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
+        self.slider_2 = customtkinter.CTkSlider(self.slider_progressbar_frame, orientation="vertical")
+        self.slider_2.grid(row=0, column=1, rowspan=5, padx=(10, 10), pady=(10, 10), sticky="ns")
+        self.progressbar_3 = customtkinter.CTkProgressBar(self.slider_progressbar_frame, orientation="vertical")
+        self.progressbar_3.grid(row=0, column=2, rowspan=5, padx=(10, 20), pady=(10, 10), sticky="ns")
+
+        # create scrollable frame
+        self.scrollable_frame = customtkinter.CTkScrollableFrame(self, label_text="CTkScrollableFrame")
+        self.scrollable_frame.grid(row=1, column=2, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.scrollable_frame.grid_columnconfigure(0, weight=1)
+        self.scrollable_frame_switches = []
+        for i in range(100):
+            switch = customtkinter.CTkSwitch(master=self.scrollable_frame, text=f"CTkSwitch {i}")
+            switch.grid(row=i, column=0, padx=10, pady=(0, 20))
+            self.scrollable_frame_switches.append(switch)
+
+        # create checkbox and switch frame
+        self.checkbox_slider_frame = customtkinter.CTkFrame(self)
+        self.checkbox_slider_frame.grid(row=1, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.checkbox_1 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
+        self.checkbox_1.grid(row=1, column=0, pady=(20, 0), padx=20, sticky="n")
+        self.checkbox_2 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
+        self.checkbox_2.grid(row=2, column=0, pady=(20, 0), padx=20, sticky="n")
+        self.checkbox_3 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
+        self.checkbox_3.grid(row=3, column=0, pady=20, padx=20, sticky="n")
+
+        # set default values
+        self.sidebar_button_3.configure(state="disabled", text="Disabled CTkButton")
+        self.checkbox_3.configure(state="disabled")
+        self.checkbox_1.select()
+        self.scrollable_frame_switches[0].select()
+        self.scrollable_frame_switches[4].select()
+        self.radio_button_3.configure(state="disabled")
+        self.appearance_mode_optionemenu.set("Dark")
+        self.scaling_optionemenu.set("100%")
+        self.optionmenu_1.set("CTkOptionmenu")
+        self.combobox_1.set("CTkComboBox")
+        self.slider_1.configure(command=self.progressbar_2.set)
+        self.slider_2.configure(command=self.progressbar_3.set)
+        self.progressbar_1.configure(mode="indeterminnate")
+        self.progressbar_1.start()
+        self.textbox.insert("0.0", "CTkTextbox\n\n" + "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.\n\n" * 20)
+        self.seg_button_1.configure(values=["CTkSegmentedButton", "Value 2", "Value 3"])
+        self.seg_button_1.set("Value 2")
+
+    def open_input_dialog_event(self):
+        dialog = customtkinter.CTkInputDialog(text="Type in a number:", title="CTkInputDialog")
+        print("CTkInputDialog:", dialog.get_input())
+
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        customtkinter.set_appearance_mode(new_appearance_mode)
+
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        customtkinter.set_widget_scaling(new_scaling_float)
+
+    def sidebar_button_event(self):
+        print("sidebar_button click")
 
 
-        # Label principal da tela de login
-        label = ctk.CTkLabel(master=frame, text='Tela de Login')
-        label.configure(font=('Roboto', 30, 'bold'))
-        label.place(x=70, y=25)
-
-        # Campo de entrada para o usuário
-        usuario = ctk.CTkEntry(frame, placeholder_text='Usuário', width=310, height=35)
-        usuario.place(x=20, y=80)
-        usuario.configure(font=('Roboto', 14))
-
-        # Label informativa abaixo do campo de usuário
-        label1 = ctk.CTkLabel(master=frame, text='*Obrigatório preenchimento do campo usuário.', text_color='#EEAD2D')
-        label1.place(x=20, y=115)
-        label1.configure(font=('Roboto', 10))
-
-        # Campo de entrada para a senha
-        senha = ctk.CTkEntry(frame, placeholder_text='Senha', width=310, height=35, show='*')
-        senha.place(x=20, y=160)
-        senha.configure(font=('Roboto', 14))
-
-        # Label informativa abaixo do campo de senha
-        label2 = ctk.CTkLabel(master=frame, text='*Obrigatório preenchimento do campo senha.', text_color='#EEAD2D')
-        label2.place(x=20, y=195)
-        label2.configure(font=('Roboto', 10))
-
-        # Checkbox "Manter login"
-        checkbox = ctk.CTkCheckBox(master=frame, text='Manter login')
-        checkbox.place(x=20, y=240)
-        checkbox.configure(font=('Roboto', 16))
-
-        def logando():
-            msg = messagebox.showinfo(title='Estado de Login', message='Parabéns! Login feito com sucesso.')
-            pass
-        # Botão de login
-        botao_login = ctk.CTkButton(master=frame, text='Login', fg_color='#fcbc1c', hover_color='#FFD700', width=300, command=logando)
-        botao_login.place(x=20, y=280)
-
-        def tela_cadastro():
-            #Remover tela de login
-            frame.pack_forget()
-
-            #Criando tela de cadastro de usuários
-            cd_frame = Frame(master=janela, bg=cor_rgb, width=350, height=396)
-            cd_frame.pack(side=LEFT)
-
-            # Titulo da janela
-            cd_label = ctk.CTkLabel(master=cd_frame, text='Cadastre-se')
-            cd_label.configure(font=('Roboto', 30, 'bold'))
-            cd_label.place(x=70, y=15)
-
-            span = ctk.CTkLabel(master=cd_frame, text='* Por Favor! Preencha todos campos', text_color='gray')
-            span.place(x=25, y=105)
-            span.configure(font=('Roboto', 12, 'bold'))
-
-            #Campo de entrada de dados
-            usuario = ctk.CTkEntry(cd_frame, placeholder_text='Nome de usuário', width=310, height=35)
-            usuario.place(x=20, y=130)
-            usuario.configure(font=('Roboto', 14))
-
-            email = ctk.CTkEntry(cd_frame, placeholder_text='E-mail de usuario', width=310, height=35)
-            email.place(x=20, y=180)
-            email.configure(font=('Roboto', 14))
-
-            senha_usuario = ctk.CTkEntry(cd_frame, placeholder_text='Senha de usuário', width=310, height=35,show='*')
-            senha_usuario.place(x=20, y=230)
-            senha_usuario.configure(font=('Roboto', 14))
-
-            csenha_usuario = ctk.CTkEntry(cd_frame, placeholder_text='Confirmar senha', width=310, height=35,)
-            csenha_usuario.place(x=20, y=280)
-            csenha_usuario.configure(font=('Roboto', 14))
-
-            def voltar():
-                #Removendo frame de cadastro
-                cd_frame.pack_forget()
-
-                # Voltando frame de login
-                frame.pack(side=LEFT)
-
-            botao_voltar = ctk.CTkButton(master=cd_frame, text='VOLTAR', fg_color='#FF0000', hover_color='#8B0000', width=145, command=voltar)
-            botao_voltar.place(x=20, y=330)
-
-            def cadastrar_usuario():
-                msg = messagebox.showinfo(title='Estado do Cadastro', message='Usuário cadastrado com sucesso.')
-                pass
-
-            botao_salvar = ctk.CTkButton(master=cd_frame, text='CADASTRAR', fg_color='#4c6c8c', hover_color='#4682B4',width=145, command=cadastrar_usuario)
-            botao_salvar.place(x=185, y=330)
-
-
-        # Label realizar cadastro
-        label4 = ctk.CTkLabel(master=frame, text='Não possuí uma conta?')
-        label4.configure(font=('Roboto', 12, 'bold'))
-        label4.place(x=25, y=335)
-        botao_cadastro = ctk.CTkButton(master=frame, text='Cadastre-se', fg_color='#4c6c8c', hover_color='#4682B4',
-                                       width=150, command=tela_cadastro)
-        botao_cadastro.place(x=170, y=335)
-
-
-
-Application()
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
