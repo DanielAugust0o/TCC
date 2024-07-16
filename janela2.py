@@ -1,164 +1,135 @@
-import tkinter
-import tkinter.messagebox
-import customtkinter
+import customtkinter as ctk
+from tkinter import *
+from tkinter import filedialog
+from PIL import Image, ImageTk
+import cv2
 
-customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
-
-
-class App(customtkinter.CTk):
-    def __init__(self):
+class JanelaMenu(ctk.CTk):
+    def __init__(self, usuario):
         super().__init__()
+        self.title("Aplicação")
+        self.geometry("1200x600")
+        self.usuario = usuario
+        self.criar_menu_superior()
+        self.resizable(False, False)
+        self.video = cv2.VideoCapture(0)
 
-        # configure window
-        self.title("CustomTkinter complex_example.py")
-        self.geometry(f"{1100}x{580}")
+        # Criar o frame inicial com o botão
+        self.frame_inicial = ctk.CTkFrame(self, width=1200, height=600, fg_color='#FFFFFF')
+        self.frame_inicial.place(x=0, y=0)
+        self.btn_iniciar = ctk.CTkButton(self.frame_inicial, text='Iniciar Câmera', font=('Roboto bold', 20), command=self.iniciar_camera)
+        self.btn_iniciar.place(relx=0.5, rely=0.5, anchor=CENTER)
 
-        # configure grid layout (4x4)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure((2, 3), weight=0)
-        self.grid_rowconfigure((0, 1, 2), weight=1)
+    def item1_command(self):
+        print("Item 1 selecionado")
 
-        # create sidebar frame with widgets
-        self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
-        self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="CustomTkinter", font=customtkinter.CTkFont(size=20, weight="bold"))
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
-        self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
-        self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
-        self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
-        self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
-        self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
-        self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
-                                                                       command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
-        self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
-        self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
-        self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
-                                                               command=self.change_scaling_event)
-        self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
+    def item2_command(self):
+        print("Item 2 selecionado")
 
-        # create main entry and button
-        self.entry = customtkinter.CTkEntry(self, placeholder_text="CTkEntry")
-        self.entry.grid(row=3, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
+    def criar_menu_superior(self):
+        # Criar o frame da barra de menu
+        self.frame_menu = ctk.CTkFrame(self, width=1200, height=65, fg_color='#4c6c8c')
+        self.frame_menu.place(x=0, y=0)
 
-        self.main_button_1 = customtkinter.CTkButton(master=self, fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"))
-        self.main_button_1.grid(row=3, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
+        # Tratando a imagem do logo
+        image_path = 'Imagens/capacete.png'
+        img = Image.open(image_path)
+        # Redimensionando a imagem
+        img = img.resize((63, 63), Image.LANCZOS)
+        self.logo = ImageTk.PhotoImage(img)
 
-        # create textbox
-        self.textbox = customtkinter.CTkTextbox(self, width=250)
-        self.textbox.grid(row=0, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        # Adicionando elementos ao menu
+        self.lb_logo = ctk.CTkLabel(self.frame_menu, text='', image=self.logo, fg_color='#4c6c8c')
+        self.lb_logo.grid(row=0, column=0, padx=40, pady=1)
 
-        # create tabview
-        self.tabview = customtkinter.CTkTabview(self, width=250)
-        self.tabview.grid(row=0, column=2, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        self.tabview.add("CTkTabview")
-        self.tabview.add("Tab 2")
-        self.tabview.add("Tab 3")
-        self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
-        self.tabview.tab("Tab 2").grid_columnconfigure(0, weight=1)
+        # Adicionando mensagem de boas-vindas
+        self.mensagem = ctk.CTkLabel(self.frame_menu, text=f'Olá {self.usuario}', font=('Roboto', 16), text_color='White', fg_color='#4c6c8c')
+        self.mensagem.grid(row=0, column=1, padx=900, pady=1)
 
-        self.optionmenu_1 = customtkinter.CTkOptionMenu(self.tabview.tab("CTkTabview"), dynamic_resizing=False,
-                                                        values=["Value 1", "Value 2", "Value Long Long Long"])
-        self.optionmenu_1.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.combobox_1 = customtkinter.CTkComboBox(self.tabview.tab("CTkTabview"),
-                                                    values=["Value 1", "Value 2", "Value Long....."])
-        self.combobox_1.grid(row=1, column=0, padx=20, pady=(10, 10))
-        self.string_input_button = customtkinter.CTkButton(self.tabview.tab("CTkTabview"), text="Open CTkInputDialog",
-                                                           command=self.open_input_dialog_event)
-        self.string_input_button.grid(row=2, column=0, padx=20, pady=(10, 10))
-        self.label_tab_2 = customtkinter.CTkLabel(self.tabview.tab("Tab 2"), text="CTkLabel on Tab 2")
-        self.label_tab_2.grid(row=0, column=0, padx=20, pady=20)
+        # Configurando frame da seleção de câmera
+        self.frame_camera = ctk.CTkFrame(self, width=300, height=400)
+        self.frame_camera.place(x=20, y=135)
 
-        # create radiobutton frame
-        self.radiobutton_frame = customtkinter.CTkFrame(self)
-        self.radiobutton_frame.grid(row=0, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        self.radio_var = tkinter.IntVar(value=0)
-        self.label_radio_group = customtkinter.CTkLabel(master=self.radiobutton_frame, text="CTkRadioButton Group:")
-        self.label_radio_group.grid(row=0, column=2, columnspan=1, padx=10, pady=10, sticky="")
-        self.radio_button_1 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, variable=self.radio_var, value=0)
-        self.radio_button_1.grid(row=1, column=2, pady=10, padx=20, sticky="n")
-        self.radio_button_2 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, variable=self.radio_var, value=1)
-        self.radio_button_2.grid(row=2, column=2, pady=10, padx=20, sticky="n")
-        self.radio_button_3 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, variable=self.radio_var, value=2)
-        self.radio_button_3.grid(row=3, column=2, pady=10, padx=20, sticky="n")
+        self.titulo = ctk.CTkLabel(self.frame_camera, text='Selecione o Setor:', font=('Roboto', 22, 'bold'))
+        self.titulo.grid(row=1, column=0, padx=10, pady=(20, 10))
 
-        # create slider and progressbar frame
-        self.slider_progressbar_frame = customtkinter.CTkFrame(self, fg_color="transparent")
-        self.slider_progressbar_frame.grid(row=1, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        self.slider_progressbar_frame.grid_columnconfigure(0, weight=1)
-        self.slider_progressbar_frame.grid_rowconfigure(4, weight=1)
-        self.seg_button_1 = customtkinter.CTkSegmentedButton(self.slider_progressbar_frame)
-        self.seg_button_1.grid(row=0, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
-        self.progressbar_1 = customtkinter.CTkProgressBar(self.slider_progressbar_frame)
-        self.progressbar_1.grid(row=1, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
-        self.progressbar_2 = customtkinter.CTkProgressBar(self.slider_progressbar_frame)
-        self.progressbar_2.grid(row=2, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
-        self.slider_1 = customtkinter.CTkSlider(self.slider_progressbar_frame, from_=0, to=1, number_of_steps=4)
-        self.slider_1.grid(row=3, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
-        self.slider_2 = customtkinter.CTkSlider(self.slider_progressbar_frame, orientation="vertical")
-        self.slider_2.grid(row=0, column=1, rowspan=5, padx=(10, 10), pady=(10, 10), sticky="ns")
-        self.progressbar_3 = customtkinter.CTkProgressBar(self.slider_progressbar_frame, orientation="vertical")
-        self.progressbar_3.grid(row=0, column=2, rowspan=5, padx=(10, 20), pady=(10, 10), sticky="ns")
+        self.btn_camera1 = ctk.CTkButton(self.frame_camera, width=280, height=40, text='Camera 1'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.btn_camera1.grid(row=2, column=0, padx=10, pady=(20, 10))
 
-        # create scrollable frame
-        self.scrollable_frame = customtkinter.CTkScrollableFrame(self, label_text="CTkScrollableFrame")
-        self.scrollable_frame.grid(row=1, column=2, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        self.scrollable_frame.grid_columnconfigure(0, weight=1)
-        self.scrollable_frame_switches = []
-        for i in range(100):
-            switch = customtkinter.CTkSwitch(master=self.scrollable_frame, text=f"CTkSwitch {i}")
-            switch.grid(row=i, column=0, padx=10, pady=(0, 20))
-            self.scrollable_frame_switches.append(switch)
+        self.btn_camera2 = ctk.CTkButton(self.frame_camera, width=280, height=40, text='Camera 2'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.btn_camera2.grid(row=3, column=0, padx=10, pady=(20, 10))
 
-        # create checkbox and switch frame
-        self.checkbox_slider_frame = customtkinter.CTkFrame(self)
-        self.checkbox_slider_frame.grid(row=1, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        self.checkbox_1 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
-        self.checkbox_1.grid(row=1, column=0, pady=(20, 0), padx=20, sticky="n")
-        self.checkbox_2 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
-        self.checkbox_2.grid(row=2, column=0, pady=(20, 0), padx=20, sticky="n")
-        self.checkbox_3 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
-        self.checkbox_3.grid(row=3, column=0, pady=20, padx=20, sticky="n")
+        self.btn_camera3 = ctk.CTkButton(self.frame_camera, width=280, height=40, text='Camera 3'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.btn_camera3.grid(row=4, column=0, padx=10, pady=(20, 10))
 
-        # set default values
-        self.sidebar_button_3.configure(state="disabled", text="Disabled CTkButton")
-        self.checkbox_3.configure(state="disabled")
-        self.checkbox_1.select()
-        self.scrollable_frame_switches[0].select()
-        self.scrollable_frame_switches[4].select()
-        self.radio_button_3.configure(state="disabled")
-        self.appearance_mode_optionemenu.set("Dark")
-        self.scaling_optionemenu.set("100%")
-        self.optionmenu_1.set("CTkOptionmenu")
-        self.combobox_1.set("CTkComboBox")
-        self.slider_1.configure(command=self.progressbar_2.set)
-        self.slider_2.configure(command=self.progressbar_3.set)
-        self.progressbar_1.configure(mode="indeterminnate")
-        self.progressbar_1.start()
-        self.textbox.insert("0.0", "CTkTextbox\n\n" + "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.\n\n" * 20)
-        self.seg_button_1.configure(values=["CTkSegmentedButton", "Value 2", "Value 3"])
-        self.seg_button_1.set("Value 2")
+        self.btn_camera4 = ctk.CTkButton(self.frame_camera, width=280, height=40, text='Camera 4'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.btn_camera4.grid(row=5, column=0, padx=10, pady=(20, 10))
 
-    def open_input_dialog_event(self):
-        dialog = customtkinter.CTkInputDialog(text="Type in a number:", title="CTkInputDialog")
-        print("CTkInputDialog:", dialog.get_input())
+        # Frame banco de imagens
+        self.frame_bd_imagem = ctk.CTkFrame(self, fg_color='#242424')
+        self.frame_bd_imagem.place(x=40, y=485)
+        self.btn_bd_imagem = ctk.CTkButton(self.frame_bd_imagem, width=250, height=40, text='Banco de Imagens'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', command=self.pasta_imagens)
+        self.btn_bd_imagem.grid(row=0, column=0, padx=10, pady=(20, 10))
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        customtkinter.set_appearance_mode(new_appearance_mode)
+        # Frame para exibir o vídeo da câmera
+        self.frame_video = ctk.CTkFrame(self, width=500, height=500, fg_color='#242424')
+        self.frame_video.place(x=343, y=65)
+        self.lb_video = ctk.CTkLabel(self.frame_video, text='', width=640, height=480)
+        self.lb_video.place(relx=0.5, rely=0.5, anchor=CENTER)
 
-    def change_scaling_event(self, new_scaling: str):
-        new_scaling_float = int(new_scaling.replace("%", "")) / 100
-        customtkinter.set_widget_scaling(new_scaling_float)
+        # Configurando frame da IA
+        self.frame_deteccao = ctk.CTkFrame(self, width=300, height=400)
+        self.frame_deteccao.place(x=865, y=135)
 
-    def sidebar_button_event(self):
-        print("sidebar_button click")
+        self.titulo = ctk.CTkLabel(self.frame_deteccao, text='Identificar:', font=('Roboto', 24, 'bold'))
+        self.titulo.grid(row=1, column=0, pady=(20, 0), padx=20, sticky="n")
+
+        self.check_capacete = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='Capacete'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.check_capacete.grid(row=2, column=0, padx=10, pady=(20, 10))
+
+        self.check_luvas = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='luvas'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.check_luvas.grid(row=3, column=0, padx=10, pady=(20, 10))
+
+        self.check_botas = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='botas'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.check_botas.grid(row=4, column=0, padx=10, pady=(20, 10))
+
+        self.check_protetor_auricular = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='protetor Auricular'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.check_protetor_auricular.grid(row=5, column=0, padx=10, pady=(20, 10))
+
+        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D')
+        self.btn_detectar.grid(row=6, column=0, padx=10, pady=(20, 10))
+
+    def iniciar_camera(self):
+        self.frame_inicial.place_forget()  # Esconder o frame inicial
+        self.update_frame()  # Iniciar a captura de vídeo
+
+    def update_frame(self):
+        ret, frame = self.video.read()
+        if ret:
+            height, width = frame.shape[:2]
+            frame_aspect_ratio = width / height
+            label_width = 640
+            label_height = int(label_width / frame_aspect_ratio)
+
+            if label_height > 480:
+                label_height = 480
+                label_width = int(label_height * frame_aspect_ratio)
+            frame = cv2.resize(frame, (label_width, label_height))
+            cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(cv2image)
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.lb_video.configure(image=imgtk)
+            self.lb_video.image = imgtk
+
+        self.lb_video.after(10, self.update_frame)
+
+    def pasta_imagens(self):
+        diretorio = filedialog.askdirectory(initialdir="/Users/danielaugusto/PycharmProjects/TCC/Imagens")
+        if diretorio:
+            print(f"Diretório selecionado: {diretorio}")
 
 
 if __name__ == "__main__":
-    app = App()
+    usuario_logado = "Usuário"  # Passe o nome de usuário logado aqui
+    app = JanelaMenu(usuario_logado)
     app.mainloop()
