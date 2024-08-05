@@ -83,12 +83,17 @@ class BackEnd:
         self.janelaferramentas = JanelaMenu(usuario)
         self.janelaferramentas.mainloop()
 
+    def on_closing(self):
+        self.desconecta_db()
+        self.destroy()
+
 class App(ctk.CTk, BackEnd):
     def __init__(self):
         super().__init__()
         self.conf_janela_ini()
         self.tela_login()
         self.cria_tabela()
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)  # Fechar janela corretamente
 
     # Configuração da Janela Principal
     def conf_janela_ini(self):
@@ -103,8 +108,8 @@ class App(ctk.CTk, BackEnd):
         self.lb_img.grid(row=1, column=0, padx=10, pady=20)
 
         # Titulo da imagem - janela login
-        self.title = ctk.CTkLabel(self, text='Entre em sua conta e tenha \n acesso a plataforma', font=('Roboto', 24, 'bold'), text_color='#EEAD2D')
-        self.title.grid(row=0, column=0, padx=20, pady=20)
+        self.header_title = ctk.CTkLabel(self, text='Entre em sua conta e tenha \n acesso a plataforma', font=('Roboto', 25, 'bold'), text_color='#EEAD2D')
+        self.header_title.grid(row=0, column=0, padx=20, pady=25)
 
         # Criar o frame do formulário de login
         self.frame_login = ctk.CTkFrame(self, width=350, height=380)
@@ -130,25 +135,29 @@ class App(ctk.CTk, BackEnd):
         self.btn_login = ctk.CTkButton(self.frame_login, width=300, text='Login'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, command=self.verifica_login)
         self.btn_login.grid(row=4, column=0, padx=10, pady=10)
 
-        # btn cadastro
-        self.span = ctk.CTkLabel(self.frame_login, text='Não possuí uma conta?', font=('Roboto', 12, 'bold'))
+        self.span = ctk.CTkLabel(self.frame_login, text='Não possui uma conta?', font=('Roboto', 12, 'bold'))
         self.span.grid(row=5, column=0, padx=10, pady=10)
-        self.btn_cadastro = ctk.CTkButton(self.frame_login, width=300, text='Cadastrar-se'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', command=self.tela_cadastro)
+
+        self.btn_cadastro = ctk.CTkButton(self.frame_login, width=300, text='Cadastrar-se'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', hover_color='#f4a42c', command=self.tela_cadastro)
         self.btn_cadastro.grid(row=6, column=0, padx=10, pady=10)
 
     def tela_cadastro(self):
+        # Destruir o frame de login
         self.frame_login.destroy()
-        self.geometry('700x520')
+        self.header_title.destroy()
+
+        # Ajustar tamanho e título da janela
+        self.geometry('700x480')
         self.title('Tela de Cadastro')
 
-        # Trabalhando com as imagens
+        # imagem janela cadastro
         self.img = PhotoImage(file='Imagens/ppe1.png')
         self.lb_img = ctk.CTkLabel(self, text=None, image=self.img)
-        self.lb_img.grid(row=1, column=0, padx=10, pady=20)
+        self.lb_img.grid(row=1, column=0, padx=10, pady=35)
 
         # Titulo da imagem - janela cadastro
-        self.title = ctk.CTkLabel(self, text='Crie uma conta \n e tenha acesso a plataforma', font=('Roboto', 24, 'bold'), text_color='#EEAD2D')
-        self.title.grid(row=0, column=0, padx=10, pady=10)
+        self.header_title = ctk.CTkLabel(self, text='Crie uma conta \n e tenha acesso a plataforma', font=('Roboto', 24, 'bold'), text_color='#EEAD2D')
+        self.header_title.grid(row=0, column=0, padx=10, pady=30)
 
         # Criar o frame do formulário de cadastro
         self.frame_cadastro = ctk.CTkFrame(self, width=350, height=580)
@@ -170,19 +179,18 @@ class App(ctk.CTk, BackEnd):
         self.senha_cadastro_entry = ctk.CTkEntry(self.frame_cadastro, width=300, placeholder_text='Senha', font=('Roboto bold', 16, 'bold'), corner_radius=15, show='*')
         self.senha_cadastro_entry.grid(row=3, column=0, padx=10, pady=10)
 
-        # lbl confirmar senha
-        self.confirma_senha_entry = ctk.CTkEntry(self.frame_cadastro, width=300, placeholder_text='Confirmar Senha', font=('Roboto bold', 16, 'bold'), corner_radius=15, show='*')
+        # lbl confirma senha
+        self.confirma_senha_entry = ctk.CTkEntry(self.frame_cadastro, width=300, placeholder_text='Confirma Senha', font=('Roboto bold', 16, 'bold'), corner_radius=15, show='*')
         self.confirma_senha_entry.grid(row=4, column=0, padx=10, pady=10)
 
-        # btn cadastrar
-        self.btn_cadastro = ctk.CTkButton(self.frame_cadastro, width=300, text='Cadastrar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, command=self.cadastrar_usuario)
-        self.btn_cadastro.grid(row=5, column=0, padx=10, pady=10)
+        # btn cadastro
+        self.btn_cadastrar = ctk.CTkButton(self.frame_cadastro, width=300, text='Cadastrar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, command=self.cadastrar_usuario)
+        self.btn_cadastrar.grid(row=5, column=0, padx=10, pady=10)
 
-        # btn voltar
-        self.span = ctk.CTkLabel(self.frame_cadastro, text='Já possui uma conta?', font=('Roboto', 12, 'bold'))
-        self.span.grid(row=6, column=0, padx=10, pady=10)
-        self.btn_voltar = ctk.CTkButton(self.frame_cadastro, width=300, text='Login'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', command=self.voltar_login)
-        self.btn_voltar.grid(row=7, column=0, padx=10, pady=10)
+        self.span_voltar = ctk.CTkLabel(self.frame_cadastro, text='Já possui uma conta?', font=('Roboto', 12, 'bold'))
+        self.span_voltar.grid(row=6, column=0, padx=10, pady=10)
+        self.btn_voltar_login = ctk.CTkButton(self.frame_cadastro, width=300, text='Voltar ao Login'.upper(), font=('Roboto bold', 16, 'bold'), hover_color='#f4a42c', corner_radius=20, fg_color='#EEAD2D', command=self.voltar_login)
+        self.btn_voltar_login.grid(row=7, column=0, padx=10, pady=10)
 
     def voltar_login(self):
         self.frame_cadastro.destroy()

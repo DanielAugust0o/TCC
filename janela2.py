@@ -104,24 +104,9 @@ class JanelaMenu(ctk.CTk):
         self.update_frame()  # Iniciar a captura de vídeo
 
     def update_frame(self):
-        ret, frame = self.video.read()
-        if ret:
-            height, width = frame.shape[:2]
-            frame_aspect_ratio = width / height
-            label_width = 640
-            label_height = int(label_width / frame_aspect_ratio)
+        self.largura = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.altura = int(self.video.get(cv2.CAP_PROP_FRAME_H))
 
-            if label_height > 480:
-                label_height = 480
-                label_width = int(label_height * frame_aspect_ratio)
-            frame = cv2.resize(frame, (label_width, label_height))
-            cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img = Image.fromarray(cv2image)
-            imgtk = ImageTk.PhotoImage(image=img)
-            self.lb_video.configure(image=imgtk)
-            self.lb_video.image = imgtk
-
-        self.lb_video.after(10, self.update_frame)
 
     def pasta_imagens(self):
         diretorio = filedialog.askdirectory(initialdir="/Users/danielaugusto/PycharmProjects/TCC/Imagens")

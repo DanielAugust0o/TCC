@@ -63,7 +63,7 @@ class JanelaMenu(ctk.CTk):
         #frame banco de imagens
         self.frame_bd_imagem = ctk.CTkFrame(self, fg_color='#242424')
         self.frame_bd_imagem.place(x=40, y=485)
-        self.btn_bd_imagem = ctk.CTkButton(self.frame_bd_imagem, width=250, height=40, text='Banco de Imagens'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', command=self.pasta_imagens)
+        self.btn_bd_imagem = ctk.CTkButton(self.frame_bd_imagem, width=250, height=40, text='Banco de Imagens'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D',hover_color='#f4a42c', command=self.pasta_imagens)
         self.btn_bd_imagem.grid(row=0, column=0, padx=10, pady=(20, 10))
 
 
@@ -92,7 +92,7 @@ class JanelaMenu(ctk.CTk):
         self.check_protetor_auricular = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='protetor Auricular'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
         self.check_protetor_auricular.grid(row=5, column=0, padx=10, pady=(20, 10))
 
-        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D')
+        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D',hover_color='#f4a42c')
         self.btn_detectar.grid(row=6, column=0, padx=10, pady=(20, 10))
 
     def update_frame(self):
