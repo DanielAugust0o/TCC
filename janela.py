@@ -2,7 +2,7 @@ from tkinter import *
 import customtkinter as ctk
 import sqlite3
 from tkinter import messagebox
-from janela_ferramentas import JanelaMenu  # Certifique-se de que JanelaMenu está no arquivo correto
+from janela_ferramentas import JanelaMenu
 
 class BackEnd:
     def conecta_db(self):
