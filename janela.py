@@ -128,8 +128,8 @@ class App(ctk.CTk, BackEnd):
         self.senha_login_entry.grid(row=2, column=0, padx=10, pady=10)
 
         # check box ver senha
-        self.ver_senha = ctk.CTkCheckBox(self.frame_login, text='Clique para ver a senha', font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.ver_senha.grid(row=3, column=0, padx=10, pady=10)
+        self.check_senha = ctk.CTkCheckBox(self.frame_login, text='Clique para ver a senha', font=('Roboto bold', 16, 'bold'), corner_radius=20, command=self.mostrar_senha)
+        self.check_senha.grid(row=3, column=0, padx=10, pady=10)
 
         # btn login
         self.btn_login = ctk.CTkButton(self.frame_login, width=300, text='Login'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, command=self.verifica_login)
@@ -191,6 +191,12 @@ class App(ctk.CTk, BackEnd):
         self.span_voltar.grid(row=6, column=0, padx=10, pady=10)
         self.btn_voltar_login = ctk.CTkButton(self.frame_cadastro, width=300, text='Voltar ao Login'.upper(), font=('Roboto bold', 16, 'bold'), hover_color='#f4a42c', corner_radius=20, fg_color='#EEAD2D', command=self.voltar_login)
         self.btn_voltar_login.grid(row=7, column=0, padx=10, pady=10)
+
+    def mostrar_senha(self):
+        if self.check_senha.get() == 1:  # Verifica se o checkbox está marcado
+            self.senha_login_entry.configure(show='')  # Mostra a senha
+        else:
+            self.senha_login_entry.configure(show='*')  # Oculta a senha
 
     def voltar_login(self):
         self.frame_cadastro.destroy()
