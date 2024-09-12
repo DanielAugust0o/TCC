@@ -1,10 +1,16 @@
+import os
+import cv2
 import customtkinter as ctk
 from tkinter import *
 from tkinter import filedialog
 from PIL import Image, ImageTk
-import cv2
 import threading
+import queue
 from ultralytics import YOLO
+
+USERNAME = 'admin'
+PASSWORD = 'daniel775'
+IP = '192.168.0.107'
 
 class JanelaMenu(ctk.CTk):
     def __init__(self, usuario):
@@ -18,18 +24,30 @@ class JanelaMenu(ctk.CTk):
         # Inicializa o modelo YOLO
         self.model = YOLO("best1.pt")  # Substitua pelo caminho do seu modelo
 
-        # Inicializa a captura de vídeo
-        self.video = cv2.VideoCapture(1)
-        self.video.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # Configurações de ambiente para o OpenCV utilizar o FFmpeg
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
+
+        # URL corrigida para rtsp
+        self.URL = f'rtsp://{USERNAME}:{PASSWORD}@{IP}/onvif1'
+        print(f'Conectado com: {self.URL}')
+
+        # Inicializa a captura de vídeo RTSP
+        self.video = cv2.VideoCapture(self.URL)
+        if not self.video.isOpened():
+            print('Erro ao abrir a câmera RTSP')
+        else:
+            print('Câmera RTSP conectada com sucesso')
 
         self.frame = None
         self.results = None
+        self.running = True
+        self.frame_queue = queue.Queue(maxsize=10)
 
         # Inicia o processamento de frames em uma thread separada
         self.processing_thread = threading.Thread(target=self.process_frame, daemon=True)
         self.processing_thread.start()
 
+        # Atualiza o frame com segurança
         self.update_frame()
 
     def criar_menu_superior(self):
@@ -72,7 +90,7 @@ class JanelaMenu(ctk.CTk):
         # Frame banco de imagens
         self.frame_bd_imagem = ctk.CTkFrame(self, fg_color='#242424')
         self.frame_bd_imagem.place(x=40, y=450)
-        self.btn_bd_imagem = ctk.CTkButton(self.frame_bd_imagem, width=250, height=40, text='Banco de Imagens'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D',hover_color='#f4a42c', command=self.pasta_imagens)
+        self.btn_bd_imagem = ctk.CTkButton(self.frame_bd_imagem, width=250, height=40, text='Banco de Imagens'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', hover_color='#f4a42c', command=self.pasta_imagens)
         self.btn_bd_imagem.grid(row=0, column=0, padx=10, pady=(20, 10))
 
         # Frame para exibir o vídeo da câmera
@@ -100,28 +118,37 @@ class JanelaMenu(ctk.CTk):
         self.check_protetor_auricular = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='protetor Auricular'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
         self.check_protetor_auricular.grid(row=5, column=0, padx=10, pady=(20, 10))
 
-        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D',hover_color='#f4a42c', command=self.detectar)
+        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', hover_color='#f4a42c', command=self.detectar)
         self.btn_detectar.grid(row=6, column=0, padx=10, pady=(20, 10))
 
     def process_frame(self):
-        while True:
-            ret, self.frame = self.video.read()
+        frame_count = 0
+        while self.running:
+            ret, frame = self.video.read()
             if ret:
-                # Processa o frame usando YOLO
-                self.results = self.model.predict(source=self.frame, conf=0.25)
+                frame = cv2.resize(frame, (640, 480))
+                if frame_count % 5 == 0:  # Processar a cada 5 frames
+                    self.results = self.model.predict(source=frame, conf=0.25)
+                if not self.frame_queue.full():
+                    self.frame_queue.put(frame)
+                frame_count += 1
 
     def update_frame(self):
-        if self.frame is not None:
+        if not self.frame_queue.empty():
+            self.frame = self.frame_queue.get()
             if self.results:
                 result_img = self.results[0].plot()  # Pega a imagem com as deteções
-                frame = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
-                img = Image.fromarray(frame)
-                imgtk = ImageTk.PhotoImage(image=img)
-                self.lb_video.configure(image=imgtk)
-                self.lb_video.image = imgtk
+                frame_rgb = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
+            else:
+                frame_rgb = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
-        # Atualiza o frame a cada 10ms
-        self.lb_video.after(15, self.update_frame)
+            img = Image.fromarray(frame_rgb)
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.lb_video.configure(image=imgtk)
+            self.lb_video.image = imgtk
+
+        # Atualiza o frame a cada 200ms para melhorar o desempenho
+        self.after(200, self.update_frame)
 
     def detectar(self):
         # A lógica de detecção pode ser colocada aqui se necessário
@@ -132,7 +159,15 @@ class JanelaMenu(ctk.CTk):
         if diretorio:
             print(f"Diretório selecionado: {diretorio}")
 
+    def on_closing(self):
+        # Encerra a captura de vídeo e a thread de processamento
+        self.running = False
+        self.video.release()
+        cv2.destroyAllWindows()
+        self.destroy()
+
 if __name__ == "__main__":
     usuario_logado = "Usuário"  # Passe o nome de usuário logado aqui
     app = JanelaMenu(usuario_logado)
+    app.protocol("WM_DELETE_WINDOW", app.on_closing)
     app.mainloop()
