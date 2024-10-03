@@ -140,7 +140,7 @@ class JanelaMenu(ctk.CTk):
             self.video.grab()  # Coleta o frame mais recente
             ret, frame = self.video.read()  # Decodifica o frame atual
             if ret:
-                if frame_count % 30 == 0:  # Processar a cada 30 frames
+                if frame_count % 2 == 0:  # Processar a cada 5 frames
                     frame = cv2.resize(frame, (512, 512))  # Reduzir a resolução
                     self.results = self.model.predict(source=frame, conf=0.4)
                 if not self.frame_queue.full():
@@ -178,7 +178,7 @@ class JanelaMenu(ctk.CTk):
             self.lb_video.image = imgtk
 
         # Atualiza o frame a cada 100ms
-        self.after(10, self.update_frame)
+        self.after(20, self.update_frame)
 
     def detectar(self):
         # A lógica de detecção pode ser colocada aqui se necessário
