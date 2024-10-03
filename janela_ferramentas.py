@@ -7,10 +7,13 @@ from PIL import Image, ImageTk
 import threading
 import queue
 from ultralytics import YOLO
+import torch
+
+
 
 USERNAME = 'admin'
 PASSWORD = 'daniel775'
-IP = '192.168.0.107'
+IP = '192.168.0.108'
 
 class JanelaMenu(ctk.CTk):
     def __init__(self, usuario):
@@ -22,7 +25,8 @@ class JanelaMenu(ctk.CTk):
         self.resizable(False, False)
 
         # Inicializa o modelo YOLO
-        self.model = YOLO("best1.pt")  # Substitua pelo caminho do seu modelo
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = YOLO("best1.pt").to(device)# Substitua pelo caminho do seu modelo
 
         # Configurações de ambiente para o OpenCV utilizar o FFmpeg
         os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
@@ -33,6 +37,9 @@ class JanelaMenu(ctk.CTk):
 
         # Inicializa a captura de vídeo RTSP
         self.video = cv2.VideoCapture(self.URL)
+        self.video.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+
         if not self.video.isOpened():
             print('Erro ao abrir a câmera RTSP')
         else:
@@ -41,7 +48,12 @@ class JanelaMenu(ctk.CTk):
         self.frame = None
         self.results = None
         self.running = True
-        self.frame_queue = queue.Queue(maxsize=10)
+        self.frame_queue = queue.Queue(maxsize=2)
+
+        # Obtenha a largura e altura do vídeo
+        self.video_width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.video_height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
 
         # Inicia o processamento de frames em uma thread separada
         self.processing_thread = threading.Thread(target=self.process_frame, daemon=True)
@@ -121,34 +133,52 @@ class JanelaMenu(ctk.CTk):
         self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', hover_color='#f4a42c', command=self.detectar)
         self.btn_detectar.grid(row=6, column=0, padx=10, pady=(20, 10))
 
+
     def process_frame(self):
         frame_count = 0
         while self.running:
-            ret, frame = self.video.read()
+            self.video.grab()  # Coleta o frame mais recente
+            ret, frame = self.video.read()  # Decodifica o frame atual
             if ret:
-                frame = cv2.resize(frame, (640, 480))
-                if frame_count % 5 == 0:  # Processar a cada 5 frames
-                    self.results = self.model.predict(source=frame, conf=0.25)
+                if frame_count % 30 == 0:  # Processar a cada 30 frames
+                    frame = cv2.resize(frame, (512, 512))  # Reduzir a resolução
+                    self.results = self.model.predict(source=frame, conf=0.4)
                 if not self.frame_queue.full():
+                    if not self.frame_queue.empty():
+                        self.frame_queue.get_nowait()  # Descartar frame antigo
                     self.frame_queue.put(frame)
                 frame_count += 1
 
     def update_frame(self):
         if not self.frame_queue.empty():
             self.frame = self.frame_queue.get()
+
             if self.results:
-                result_img = self.results[0].plot()  # Pega a imagem com as deteções
+                result_img = self.results[0].plot()  # Exibe as detecções
                 frame_rgb = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
             else:
                 frame_rgb = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
+            # Redimensiona a imagem mantendo a proporção
             img = Image.fromarray(frame_rgb)
+            img_ratio = img.width / img.height
+            label_ratio = self.lb_video.winfo_width() / self.lb_video.winfo_height()
+
+            if img_ratio > label_ratio:
+                new_width = self.lb_video.winfo_width()
+                new_height = int(new_width / img_ratio)
+            else:
+                new_height = self.lb_video.winfo_height()
+                new_width = int(new_height * img_ratio)
+
+            img = img.resize((new_width, new_height), Image.LANCZOS)
             imgtk = ImageTk.PhotoImage(image=img)
+
             self.lb_video.configure(image=imgtk)
             self.lb_video.image = imgtk
 
-        # Atualiza o frame a cada 200ms para melhorar o desempenho
-        self.after(200, self.update_frame)
+        # Atualiza o frame a cada 100ms
+        self.after(10, self.update_frame)
 
     def detectar(self):
         # A lógica de detecção pode ser colocada aqui se necessário
