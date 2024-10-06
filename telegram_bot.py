@@ -1,8 +1,8 @@
 import telebot
 
 # Substitua pelo token do seu bot
-TOKEN = '7631292504:AAE832UkHj2scbakf6XG5aNMG2L1l5pQMfk'
-CHAT_ID = '1271362249'  #  # Substitua pelo chat ID do grupo ou usuário
+TOKEN = '7552093490:AAG_7ho97BYEQjoZ67BKeNTnIgX7VKKFcBQ'
+CHAT_ID = '1184444451'  #  # Substitua pelo chat ID do grupo ou usuário
 
 
 bot = telebot.TeleBot(token=TOKEN)
