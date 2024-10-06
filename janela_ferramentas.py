@@ -1,4 +1,5 @@
 import os
+import time
 import cv2
 import customtkinter as ctk
 from tkinter import *
@@ -8,12 +9,27 @@ import threading
 import queue
 from ultralytics import YOLO
 import torch
-
+import telebot
 
 
 USERNAME = 'admin'
 PASSWORD = 'daniel775'
-IP = '192.168.0.108'
+IP = '192.168.0.106'
+
+# Configurações do Telegram
+TOKEN = '7631292504:AAE832UkHj2scbakf6XG5aNMG2L1l5pQMfk'
+CHAT_ID = '1271362249'  #  # Substitua pelo chat ID do grupo ou usuário
+
+bot = telebot.TeleBot(token=TOKEN)
+
+def send_telegram_message(text):
+    try:
+        bot.send_message(chat_id=CHAT_ID, text=text)
+        print("Mensagem enviada com sucesso!")
+    except Exception as e:
+        print(f"Erro ao enviar mensagem pelo Telegram: {e}")
+
+
 
 class JanelaMenu(ctk.CTk):
     def __init__(self, usuario):
@@ -26,7 +42,7 @@ class JanelaMenu(ctk.CTk):
 
         # Inicializa o modelo YOLO
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = YOLO("best1.pt").to(device)# Substitua pelo caminho do seu modelo
+        self.model = YOLO("best4.pt").to(device)  # Substitua pelo caminho do seu modelo
 
         # Configurações de ambiente para o OpenCV utilizar o FFmpeg
         os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
@@ -36,9 +52,8 @@ class JanelaMenu(ctk.CTk):
         print(f'Conectado com: {self.URL}')
 
         # Inicializa a captura de vídeo RTSP
-        self.video = cv2.VideoCapture(self.URL)
+        self.video = cv2.VideoCapture(0)
         self.video.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
 
         if not self.video.isOpened():
             print('Erro ao abrir a câmera RTSP')
@@ -49,11 +64,6 @@ class JanelaMenu(ctk.CTk):
         self.results = None
         self.running = True
         self.frame_queue = queue.Queue(maxsize=2)
-
-        # Obtenha a largura e altura do vídeo
-        self.video_width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.video_height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
 
         # Inicia o processamento de frames em uma thread separada
         self.processing_thread = threading.Thread(target=self.process_frame, daemon=True)
@@ -130,34 +140,65 @@ class JanelaMenu(ctk.CTk):
         self.check_protetor_auricular = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='protetor Auricular'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
         self.check_protetor_auricular.grid(row=5, column=0, padx=10, pady=(20, 10))
 
-        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', hover_color='#f4a42c', command=self.detectar)
+        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', hover_color='#f4a42c')
         self.btn_detectar.grid(row=6, column=0, padx=10, pady=(20, 10))
 
-
     def process_frame(self):
-        frame_count = 0
         while self.running:
-            self.video.grab()  # Coleta o frame mais recente
-            ret, frame = self.video.read()  # Decodifica o frame atual
-            if ret:
-                if frame_count % 2 == 0:  # Processar a cada 5 frames
-                    frame = cv2.resize(frame, (512, 512))  # Reduzir a resolução
-                    self.results = self.model.predict(source=frame, conf=0.4)
-                if not self.frame_queue.full():
-                    if not self.frame_queue.empty():
-                        self.frame_queue.get_nowait()  # Descartar frame antigo
-                    self.frame_queue.put(frame)
-                frame_count += 1
+            try:
+                ret, frame = self.video.read()  # Captura o frame atual
+                if ret:
+                    # Aplica o modelo YOLO ao frame
+                    results = self.model(frame)  # Realiza a detecção
+
+                    # Lista para armazenar as classes detectadas
+                    detected_items = []
+
+                    for result in results:  # Itera sobre cada detecção
+                        for box in result.boxes:  # Para cada boxe detectado
+                            cls = int(box.cls)  # Pega a classe do objeto detectado
+                            detected_items.append(cls)  # Armazena na lista
+
+                    # Verifique quais itens de EPI foram detectados
+                    missing_items = []
+                    if 0 not in detected_items:  # Classe 0 = botas
+                        missing_items.append('Botas')
+                    if 1 not in detected_items:  # Classe 1 = óculos
+                        missing_items.append('Óculos de Proteção')
+                    if 2 not in detected_items:  # Classe 2 = luvas
+                        missing_items.append('Luvas')
+                    if 3 not in detected_items:  # Classe 3 = capacete
+                        missing_items.append('Capacete')
+                    if 4 not in detected_items:  # Classe 4 = pessoa
+                        missing_items.append('Pessoa')
+                    if 5 not in detected_items:  # Classe 5 = colete
+                        missing_items.append('Colete')
+
+                    # Se houver itens faltando, envie um alerta pelo Telegram
+                    if missing_items:
+                        try:
+                            send_telegram_message(
+                                f"Alerta: Os seguintes itens de EPI não foram identificados: {', '.join(missing_items)}"
+                            )
+                        except Exception as e:
+                            print(f"Erro ao enviar mensagem pelo Telegram: {e}")
+
+                    # Desenha as detecções no frame
+                    annotated_frame = results[0].plot()  # Desenha as detecções no frame
+
+                    if not self.frame_queue.full():
+                        if not self.frame_queue.empty():
+                            self.frame_queue.get_nowait()  # Descartar frame antigo
+                        self.frame_queue.put(annotated_frame)
+
+            except Exception as e:
+                print(f"Erro durante o processamento do frame: {e}")
+            time.sleep(0.01)  # Pausa para não sobrecarregar a CPU
 
     def update_frame(self):
         if not self.frame_queue.empty():
             self.frame = self.frame_queue.get()
-
-            if self.results:
-                result_img = self.results[0].plot()  # Exibe as detecções
-                frame_rgb = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
-            else:
-                frame_rgb = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            frame_rgb = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
             # Redimensiona a imagem mantendo a proporção
             img = Image.fromarray(frame_rgb)
@@ -177,12 +218,8 @@ class JanelaMenu(ctk.CTk):
             self.lb_video.configure(image=imgtk)
             self.lb_video.image = imgtk
 
-        # Atualiza o frame a cada 100ms
-        self.after(20, self.update_frame)
-
-    def detectar(self):
-        # A lógica de detecção pode ser colocada aqui se necessário
-        print("Botão Detectar pressionado")
+        # Atualiza o frame a cada 15ms
+        self.after(15, self.update_frame)
 
     def pasta_imagens(self):
         diretorio = filedialog.askdirectory(initialdir="/Users/danielaugusto/PycharmProjects/TCC/Imagens")
@@ -193,11 +230,14 @@ class JanelaMenu(ctk.CTk):
         # Encerra a captura de vídeo e a thread de processamento
         self.running = False
         self.video.release()
+        self.processing_thread.join()  # Aguardando a thread de processamento terminar
         cv2.destroyAllWindows()
         self.destroy()
+
 
 if __name__ == "__main__":
     usuario_logado = "Usuário"  # Passe o nome de usuário logado aqui
     app = JanelaMenu(usuario_logado)
     app.protocol("WM_DELETE_WINDOW", app.on_closing)
     app.mainloop()
+    bot.polling()
