@@ -1,19 +1,31 @@
 import os
+import time
 import cv2
 import customtkinter as ctk
-from tkinter import *
 from tkinter import filedialog
 from PIL import Image, ImageTk
 import threading
 import queue
 from ultralytics import YOLO
 import torch
-
-
+import telebot
 
 USERNAME = 'admin'
 PASSWORD = 'daniel775'
 IP = '192.168.0.106'
+
+# Configurações do Telegram
+TOKEN = '7552093490:AAG_7ho97BYEQjoZ67BKeNTnIgX7VKKFcBQ'
+CHAT_ID = '1184444451'  # Substitua pelo chat ID do grupo ou usuário
+
+bot = telebot.TeleBot(token=TOKEN)
+
+def send_telegram_message(text):
+    try:
+        bot.send_message(chat_id=CHAT_ID, text=text)
+        print("Mensagem enviada com sucesso!")
+    except Exception as e:
+        print(f"Erro ao enviar mensagem pelo Telegram: {e}")
 
 class JanelaMenu(ctk.CTk):
     def __init__(self, usuario):
@@ -26,7 +38,7 @@ class JanelaMenu(ctk.CTk):
 
         # Inicializa o modelo YOLO
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = YOLO("best1.pt").to(device)# Substitua pelo caminho do seu modelo
+        self.model = YOLO("best4.pt").to(device)
 
         # Configurações de ambiente para o OpenCV utilizar o FFmpeg
         os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
@@ -36,9 +48,8 @@ class JanelaMenu(ctk.CTk):
         print(f'Conectado com: {self.URL}')
 
         # Inicializa a captura de vídeo RTSP
-        self.video = cv2.VideoCapture(self.URL)
+        self.video = cv2.VideoCapture(0)
         self.video.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
 
         if not self.video.isOpened():
             print('Erro ao abrir a câmera RTSP')
@@ -49,11 +60,8 @@ class JanelaMenu(ctk.CTk):
         self.results = None
         self.running = True
         self.frame_queue = queue.Queue(maxsize=2)
-
-        # Obtenha a largura e altura do vídeo
-        self.video_width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.video_height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
+        self.last_alert_time = 0  # Controle de tempo do alerta
+        self.detection_active = False  # Controle para iniciar a detecção
 
         # Inicia o processamento de frames em uma thread separada
         self.processing_thread = threading.Thread(target=self.process_frame, daemon=True)
@@ -87,17 +95,10 @@ class JanelaMenu(ctk.CTk):
         self.titulo = ctk.CTkLabel(self.frame_camera, text='Selecione o Setor:', font=('Roboto', 22, 'bold'))
         self.titulo.grid(row=1, column=0, padx=10, pady=(20, 10))
 
-        self.btn_camera1 = ctk.CTkButton(self.frame_camera, width=280, height=40, text='Camera 1'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.btn_camera1.grid(row=2, column=0, padx=10, pady=(20, 10))
-
-        self.btn_camera2 = ctk.CTkButton(self.frame_camera, width=280, height=40, text='Camera 2'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.btn_camera2.grid(row=3, column=0, padx=10, pady=(20, 10))
-
-        self.btn_camera3 = ctk.CTkButton(self.frame_camera, width=280, height=40, text='Camera 3'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.btn_camera3.grid(row=4, column=0, padx=10, pady=(20, 10))
-
-        self.btn_camera4 = ctk.CTkButton(self.frame_camera, width=280, height=40, text='Camera 4'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.btn_camera4.grid(row=5, column=0, padx=10, pady=(20, 10))
+        # Botões da câmera
+        for i in range(1, 5):
+            btn_camera = ctk.CTkButton(self.frame_camera, width=280, height=40, text=f'Camera {i}'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+            btn_camera.grid(row=i + 1, column=0, padx=10, pady=(20, 10))
 
         # Frame banco de imagens
         self.frame_bd_imagem = ctk.CTkFrame(self, fg_color='#242424')
@@ -109,95 +110,122 @@ class JanelaMenu(ctk.CTk):
         self.frame_video = ctk.CTkFrame(self, width=500, height=500, fg_color='#242424')
         self.frame_video.place(x=343, y=65)
         self.lb_video = ctk.CTkLabel(self.frame_video, text='', width=640, height=480)
-        self.lb_video.place(relx=0.5, rely=0.5, anchor=CENTER)
-
-        # Configurando frame da IA
-        self.frame_deteccao = ctk.CTkFrame(self, width=300, height=400)
+        self.lb_video.place(relx=0.5, rely=0.5, anchor='center')
+        self.frame_deteccao = ctk.CTkFrame(self, width=300, height=550)
         self.frame_deteccao.place(x=865, y=135)
 
         self.titulo = ctk.CTkLabel(self.frame_deteccao, text='Identificar:', font=('Roboto', 24, 'bold'))
         self.titulo.grid(row=1, column=0, pady=(20, 0), padx=20, sticky="n")
 
+        # Configurando Frame de identificação
+        self.check_botas = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='Botas'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.check_botas.grid(row=2, column=0, padx=10, pady=(20, 10))
+
+        self.check_oculos = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='Óculos de Proteção'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.check_oculos.grid(row=3, column=0, padx=10, pady=(20, 10))
+
+        self.check_luvas = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='Luvas'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.check_luvas.grid(row=4, column=0, padx=10, pady=(20, 10))
+
         self.check_capacete = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='Capacete'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.check_capacete.grid(row=2, column=0, padx=10, pady=(20, 10))
+        self.check_capacete.grid(row=5, column=0, padx=10, pady=(20, 10))
 
-        self.check_luvas = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='luvas'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.check_luvas.grid(row=3, column=0, padx=10, pady=(20, 10))
+        self.check_colete = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='Colete'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
+        self.check_colete.grid(row=6, column=0, padx=10, pady=(20, 10))
 
-        self.check_botas = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='botas'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.check_botas.grid(row=4, column=0, padx=10, pady=(20, 10))
+        # Botão para iniciar a detecção
+        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', hover_color='#f4a42c', command=self.iniciar_deteccao)
+        self.btn_detectar.grid(row=7, column=0, padx=10, pady=(30, 10))
 
-        self.check_protetor_auricular = ctk.CTkCheckBox(self.frame_deteccao, width=300, text='protetor Auricular'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20)
-        self.check_protetor_auricular.grid(row=5, column=0, padx=10, pady=(20, 10))
-
-        self.btn_detectar = ctk.CTkButton(self.frame_deteccao, width=250, height=40, text='Detectar'.upper(), font=('Roboto bold', 16, 'bold'), corner_radius=20, fg_color='#EEAD2D', hover_color='#f4a42c', command=self.detectar)
-        self.btn_detectar.grid(row=6, column=0, padx=10, pady=(20, 10))
-
+    def iniciar_deteccao(self):
+        """Função chamada quando o botão 'Detectar' é pressionado."""
+        self.detection_active = True  # Ativa a detecção
 
     def process_frame(self):
-        frame_count = 0
+        """Processa os frames da câmera e realiza a detecção."""
         while self.running:
-            self.video.grab()  # Coleta o frame mais recente
-            ret, frame = self.video.read()  # Decodifica o frame atual
-            if ret:
-                if frame_count % 10 == 0:  # Processar a cada 5 frames
-                    frame = cv2.resize(frame, (640, 640))  # Reduzir a resolução
-                    self.results = self.model.predict(source=frame, conf=0.5)
-                if not self.frame_queue.full():
-                    if not self.frame_queue.empty():
-                        self.frame_queue.get_nowait()  # Descartar frame antigo
-                    self.frame_queue.put(frame)
-                frame_count += 1
+            try:
+                ret, frame = self.video.read()
+                if not ret:
+                    print("Falha ao capturar o frame.")
+                    continue
+
+                if self.detection_active:  # Realiza a detecção apenas se estiver ativa
+                    # Detecção de objetos usando YOLO
+                    results = self.model(frame, conf=0.5, max_det=5)
+
+                    # Identifica as classes detectadas
+                    detected_items = [int(result.boxes.cls.cpu().numpy()[0]) for result in results]
+
+                    # Verifica se há EPIs faltando e envia mensagem para o Telegram
+                    missing_items = self.check_missing_items(detected_items)
+                    if missing_items:
+                        current_time = time.time()
+                        if current_time - self.last_alert_time > 60:  # 60 segundos entre alertas
+                            send_telegram_message(f"Atenção! Os seguintes EPIs estão faltando: {missing_items}")
+                            self.last_alert_time = current_time
+
+                # Reduz o tamanho do frame para 640x480 para exibir na interface
+                frame_resized = cv2.resize(frame, (640, 480))
+
+                # Converte o frame para RGB para o tkinter exibir
+                frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+
+                # Converte o frame em imagem PIL
+                frame_pil = Image.fromarray(frame_rgb)
+                frame_tk = ImageTk.PhotoImage(frame_pil)
+
+                # Coloca a imagem no label do vídeo
+                self.lb_video.imgtk = frame_tk
+                self.lb_video.configure(image=frame_tk)
+
+                # Aguarda um curto período antes de processar o próximo frame
+                time.sleep(0.03)
+
+            except Exception as e:
+                print(f"Erro ao processar frame: {e}")
+
+    def get_selected_items(self):
+        selected_items = []
+        if self.check_botas.get():
+            selected_items.append(0)  # Classe 0: boots
+        if self.check_oculos.get():
+            selected_items.append(1)  # Classe 1: glasses
+        if self.check_luvas.get():
+            selected_items.append(2)  # Classe 2: gloves
+        if self.check_capacete.get():
+            selected_items.append(3)  # Classe 3: helmet
+        if self.check_colete.get():
+            selected_items.append(5)  # Classe 5: vest
+        return selected_items
+
+    def check_missing_items(self, detected_items):
+        expected_items = self.get_selected_items()
+        missing_items = [item for item in expected_items if item not in detected_items]
+
+        # Mapear os números das classes para os nomes dos itens
+        item_names = {0: 'Botas', 1: 'Óculos', 2: 'Luvas', 3: 'Capacete', 5: 'Colete'}
+        missing_item_names = [item_names[item] for item in missing_items]
+
+        return missing_item_names
 
     def update_frame(self):
         if not self.frame_queue.empty():
-            self.frame = self.frame_queue.get()
+            frame = self.frame_queue.get()
+            self.lb_video.configure(image=frame)
+            self.lb_video.image = frame
 
-            if self.results:
-                result_img = self.results[0].plot()  # Exibe as detecções
-                frame_rgb = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
-            else:
-                frame_rgb = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-
-            # Redimensiona a imagem mantendo a proporção
-            img = Image.fromarray(frame_rgb)
-            img_ratio = img.width / img.height
-            label_ratio = self.lb_video.winfo_width() / self.lb_video.winfo_height()
-
-            if img_ratio > label_ratio:
-                new_width = self.lb_video.winfo_width()
-                new_height = int(new_width / img_ratio)
-            else:
-                new_height = self.lb_video.winfo_height()
-                new_width = int(new_height * img_ratio)
-
-            img = img.resize((new_width, new_height), Image.LANCZOS)
-            imgtk = ImageTk.PhotoImage(image=img)
-
-            self.lb_video.configure(image=imgtk)
-            self.lb_video.image = imgtk
-
-        # Atualiza o frame a cada 100ms
-        self.after(10, self.update_frame)
-
-    def detectar(self):
-        # A lógica de detecção pode ser colocada aqui se necessário
-        print("Botão Detectar pressionado")
+        self.after(30, self.update_frame)
 
     def pasta_imagens(self):
-        diretorio = filedialog.askdirectory(initialdir="/Users/danielaugusto/PycharmProjects/TCC/Imagens")
-        if diretorio:
-            print(f"Diretório selecionado: {diretorio}")
+        filedialog.askdirectory()
 
-    def on_closing(self):
-        # Encerra a captura de vídeo e a thread de processamento
+    def close(self):
         self.running = False
         self.video.release()
-        cv2.destroyAllWindows()
         self.destroy()
 
 if __name__ == "__main__":
-    usuario_logado = "Usuário"  # Passe o nome de usuário logado aqui
-    app = JanelaMenu(usuario_logado)
-    app.protocol("WM_DELETE_WINDOW", app.on_closing)
+    app = JanelaMenu(usuario="Admin")
+    app.protocol("WM_DELETE_WINDOW", app.close)
     app.mainloop()
